@@ -1,0 +1,1092 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head><base href="https://d16ilfvy4mv02r.cloudfront.net/workspaces/OaimN2DEyt64tZQtqORVH4wkglKm3Kom/e84e00dd-48c9-4515-92bf-ce9fdad6391f/files/">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FH6 Road Discovery Tracker</title>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161a22;
+    --surface2: #1e2330;
+    --border: #2a3045;
+    --accent: #00c8ff;
+    --accent2: #ff6b1a;
+    --green: #22d47a;
+    --red: #ff4466;
+    --text: #e8eaf0;
+    --text-muted: #7a82a0;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+  /* TOP HEADER */
+  .header {
+    background: linear-gradient(135deg, #0a0c12 0%, #111622 100%);
+    border-bottom: 2px solid var(--accent);
+    padding: 16px 24px;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 4px 30px rgba(0,200,255,0.1);
+  }
+  .header-logo { font-size: 22px; font-weight: 800; letter-spacing: 1px; }
+  .header-logo span { color: var(--accent); }
+  .header-progress-wrap { flex: 1; min-width: 200px; }
+  .header-progress-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .progress-bar-outer { background: var(--border); border-radius: 99px; height: 10px; overflow: hidden; }
+  .progress-bar-inner { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width 0.4s ease; }
+  .header-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+  .stat { text-align: center; }
+  .stat-num { font-size: 22px; font-weight: 800; color: var(--accent); line-height: 1; }
+  .stat-num.red { color: var(--red); }
+  .stat-num.green { color: var(--green); }
+  .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .header-actions { display: flex; gap: 8px; }
+  .btn { padding: 7px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; transition: all 0.2s; }
+  .btn-ghost { background: var(--border); color: var(--text-muted); }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+  .btn-danger { background: rgba(255,68,102,0.15); color: var(--red); border: 1px solid rgba(255,68,102,0.3); }
+  .btn-danger:hover { background: rgba(255,68,102,0.25); }
+  .btn-export { background: rgba(0,200,255,0.12); color: var(--accent); border: 1px solid rgba(0,200,255,0.3); }
+  .btn-export:hover { background: rgba(0,200,255,0.22); }
+  .btn-import { background: rgba(255,107,26,0.12); color: var(--accent2); border: 1px solid rgba(255,107,26,0.3); }
+  .btn-import:hover { background: rgba(255,107,26,0.22); }
+
+  /* IMPORT/EXPORT MODAL */
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    z-index: 200; align-items: center; justify-content: center;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 28px; width: 480px; max-width: 95vw; position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .modal-title { font-size: 17px; font-weight: 800; margin-bottom: 6px; }
+  .modal-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+  .modal-textarea {
+    width: 100%; height: 160px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px; color: var(--text); font-size: 11px;
+    font-family: monospace; resize: vertical; outline: none; line-height: 1.5;
+  }
+  .modal-textarea:focus { border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+  .modal-close { position: absolute; top: 14px; right: 16px; background: none; border: none;
+    color: var(--text-muted); font-size: 20px; cursor: pointer; line-height: 1; }
+  .modal-close:hover { color: var(--text); }
+  .modal-info { font-size: 11px; color: var(--text-muted); margin-top: 10px; padding: 8px 12px;
+    background: var(--surface2); border-radius: 6px; border-left: 3px solid var(--accent); }
+
+  /* LAYOUT */
+  .layout { display: flex; height: calc(100vh - 74px); }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 260px; min-width: 260px; background: var(--surface);
+    border-right: 1px solid var(--border); overflow-y: auto; padding: 12px 0;
+  }
+  .sidebar-title { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); padding: 8px 16px 4px; }
+  .region-item {
+    padding: 10px 16px; cursor: pointer; border-left: 3px solid transparent;
+    transition: all 0.15s; display: flex; flex-direction: column; gap: 4px;
+  }
+  .region-item:hover { background: var(--surface2); }
+  .region-item.active { background: var(--surface2); border-left-color: var(--accent); }
+  .region-item-header { display: flex; justify-content: space-between; align-items: center; }
+  .region-name { font-size: 13px; font-weight: 700; }
+  .region-count { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+  .region-count.complete { color: var(--green); }
+  .region-mini-bar { height: 4px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .region-mini-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width 0.3s; }
+
+  .sidebar-divider { height: 1px; background: var(--border); margin: 8px 12px; }
+
+  /* MAIN CONTENT */
+  .main { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* TOOLBAR */
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .search-box {
+    flex: 1; min-width: 180px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 14px; color: var(--text); font-size: 13px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-box:focus { border-color: var(--accent); }
+  .filter-btn {
+    padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-muted); cursor: pointer;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.3px; transition: all 0.15s;
+  }
+  .filter-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+  .filter-btn:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+
+  /* REGION HEADER */
+  .region-header { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+  .region-header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .region-header-name { font-size: 20px; font-weight: 800; }
+  .region-header-pct { font-size: 28px; font-weight: 900; color: var(--accent); }
+  .region-big-bar { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .region-big-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width 0.3s; }
+  .region-header-meta { display: flex; gap: 20px; margin-top: 10px; }
+  .region-meta-item { font-size: 12px; color: var(--text-muted); }
+  .region-meta-item strong { color: var(--text); }
+
+  /* ROAD GRID */
+  .road-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+
+  /* ROAD CARD */
+  .road-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 10px;
+    user-select: none;
+  }
+  .road-card:hover { border-color: var(--accent); background: var(--surface2); }
+  .road-card.discovered { border-color: rgba(34,212,122,0.3); background: rgba(34,212,122,0.05); }
+  .road-card.discovered:hover { border-color: var(--green); }
+  .road-checkbox {
+    width: 20px; height: 20px; border-radius: 5px; border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: all 0.15s; font-size: 12px;
+  }
+  .road-card.discovered .road-checkbox { background: var(--green); border-color: var(--green); color: #000; font-weight: 900; }
+  .road-info { flex: 1; min-width: 0; }
+  .road-name { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .road-card.discovered .road-name { color: var(--text-muted); text-decoration: line-through; }
+  .road-sub { font-size: 10px; color: var(--text-muted); }
+  .road-card.discovered .road-sub { color: rgba(122,130,160,0.5); }
+
+  /* EMPTY */
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .empty-sub { font-size: 13px; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px;
+    font-size: 13px; font-weight: 600; z-index: 999; opacity: 0; transform: translateY(20px);
+    transition: all 0.3s; pointer-events: none; max-width: 300px;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* COMPLETE BANNER */
+  .complete-banner {
+    background: linear-gradient(135deg, rgba(34,212,122,0.15), rgba(0,200,255,0.1));
+    border: 1px solid var(--green); border-radius: var(--radius); padding: 16px 20px;
+    text-align: center; display: none;
+  }
+  .complete-banner.show { display: block; }
+  .complete-banner h2 { color: var(--green); font-size: 20px; margin-bottom: 4px; }
+  .complete-banner p { color: var(--text-muted); font-size: 13px; }
+
+
+  /* SAVE INDICATOR */
+  .save-indicator {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; color: var(--text-muted);
+    padding: 5px 10px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 99px; transition: all 0.3s; white-space: nowrap;
+  }
+  .save-indicator.saving { color: var(--accent2); border-color: rgba(255,107,26,0.4); }
+  .save-indicator.saved  { color: var(--green);   border-color: rgba(34,212,122,0.4); }
+  .save-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .save-indicator.saving .save-dot { animation: pulse-dot 0.8s infinite; }
+  @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  /* AD SLOTS */
+  .ad-leaderboard {
+    width: 100%; background: var(--surface); border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border); display: flex; align-items: center;
+    justify-content: center; min-height: 90px; padding: 6px 0;
+  }
+  .ad-sidebar {
+    margin: 10px 12px 4px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    min-height: 250px;
+  }
+  .ad-placeholder {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; padding: 16px; text-align: center; width: 100%; height: 100%;
+    border: 2px dashed var(--border); border-radius: 6px; margin: 6px;
+  }
+  .ad-placeholder-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); font-weight: 700; }
+  .ad-placeholder-size { font-size: 10px; color: var(--border); font-family: monospace; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  @media (max-width: 700px) {
+    .sidebar { width: 200px; min-width: 200px; }
+    .header-stats { gap: 10px; }
+  }
+  @media (max-width: 520px) {
+    .layout { flex-direction: column; height: auto; }
+    .sidebar { width: 100%; min-width: 0; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+  }
+
+  /* HARD ROADS TAB */
+  .tab-bar { display: flex; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 4px; width: fit-content; }
+  .tab-btn { padding: 7px 16px; border-radius: 7px; border: none; background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; }
+  .tab-btn.active { background: var(--surface2); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+  .tab-btn.hard.active { background: rgba(255,107,26,0.18); color: var(--accent2); }
+  .tab-btn:hover:not(.active) { color: var(--text); }
+  .hard-panel { display: none; flex-direction: column; gap: 20px; }
+  .hard-panel.visible { display: flex; }
+  .hard-intro { background: linear-gradient(135deg,rgba(255,107,26,0.1),rgba(255,68,102,0.08)); border: 1px solid rgba(255,107,26,0.3); border-radius: var(--radius); padding: 14px 18px; }
+  .hard-intro h3 { color: var(--accent2); font-size: 15px; margin-bottom: 6px; }
+  .hard-intro p { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+  .hard-tips-global { display: grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 8px; }
+  .hard-tip-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 13px; font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+  .hard-tip-chip strong { color: var(--text); display: block; margin-bottom: 3px; font-size: 12px; }
+  .hard-region-block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .hard-region-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--surface2); cursor: pointer; user-select: none; }
+  .hard-region-head:hover { background: var(--border); }
+  .hard-region-emoji { font-size: 18px; }
+  .hard-region-name { font-size: 14px; font-weight: 800; flex: 1; }
+  .hard-region-count { font-size: 11px; color: var(--text-muted); background: var(--bg); padding: 2px 8px; border-radius: 99px; border: 1px solid var(--border); }
+  .hard-chevron { font-size: 11px; color: var(--text-muted); transition: transform 0.2s; }
+  .hard-region-block.open .hard-chevron { transform: rotate(90deg); }
+  .hard-roads-list { display: none; flex-direction: column; gap: 1px; }
+  .hard-region-block.open .hard-roads-list { display: flex; }
+  .hard-road-card { display: flex; align-items: flex-start; gap: 12px; padding: 13px 16px; border-top: 1px solid rgba(255,255,255,0.04); transition: background 0.12s; cursor: pointer; }
+  .hard-road-card:hover { background: rgba(255,255,255,0.03); }
+  .hard-road-card.found { opacity: 0.55; }
+  .hard-check { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; font-size: 13px; transition: all 0.15s; }
+  .hard-road-card.found .hard-check { background: var(--green); border-color: var(--green); color: #000; font-weight: 900; }
+  .hard-road-body { flex: 1; min-width: 0; }
+  .hard-road-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .hard-road-card.found .hard-road-title { text-decoration: line-through; color: var(--text-muted); }
+  .diff-badge { font-size: 9px; font-weight: 800; padding: 2px 7px; border-radius: 99px; letter-spacing: 0.5px; flex-shrink: 0; }
+  .diff-nightmare { background: rgba(255,68,102,0.2); color: var(--red); border: 1px solid rgba(255,68,102,0.4); }
+  .diff-hard { background: rgba(255,107,26,0.2); color: var(--accent2); border: 1px solid rgba(255,107,26,0.4); }
+  .diff-tricky { background: rgba(234,179,8,0.2); color: #eab308; border: 1px solid rgba(234,179,8,0.4); }
+  .hard-road-tip { font-size: 11px; color: var(--text-muted); line-height: 1.55; }
+  .hard-road-card.found .hard-road-tip { color: rgba(122,130,160,0.5); }
+
+
+  .hard-found-banner { text-align: center; padding: 12px; font-size: 12px; color: var(--green); font-weight: 700; display: none; }
+  .hard-found-banner.show { display: block; }
+  .hard-progress-bar { height: 3px; background: var(--border); }
+  .hard-progress-fill { height: 100%; background: var(--accent2); transition: width 0.3s; }
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">FH6 <span>Road Tracker</span></div>
+  <div class="header-progress-wrap">
+    <div class="header-progress-label">
+      <span>Overall Progress</span>
+      <span id="pct-label">0%</span>
+    </div>
+    <div class="progress-bar-outer">
+      <div class="progress-bar-inner" id="main-bar" style="width:0%"></div>
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="stat"><div class="stat-num" id="stat-total">671</div><div class="stat-label">Total</div></div>
+    <div class="stat"><div class="stat-num green" id="stat-disc">0</div><div class="stat-label">Found</div></div>
+    <div class="stat"><div class="stat-num red" id="stat-left">671</div><div class="stat-label">Left</div></div>
+  </div>
+  <div class="save-indicator" id="save-indicator"><div class="save-dot"></div><span id="save-label">Loading…</span></div>
+  <div class="header-actions">
+    <button class="btn btn-export" onclick="openExport()">⬆ Export</button>
+    <button class="btn btn-import" onclick="openImport()">⬇ Import</button>
+    <button class="btn btn-ghost" onclick="markAllRegion()">✓ Region</button>
+    <button class="btn btn-danger" onclick="resetAll()">↺ Reset</button>
+  </div>
+</div>
+
+<!-- LEADERBOARD AD — 728×90 — swap the placeholder div with your ad network code -->
+<div class="ad-leaderboard" id="ad-leaderboard">
+  <!-- PASTE YOUR AD CODE HERE e.g. Google AdSense <ins> tag -->
+  <div class="ad-placeholder">
+    <span class="ad-placeholder-label">Advertisement</span>
+    <span class="ad-placeholder-size">728 × 90 — Leaderboard Banner</span>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-title">Regions</div>
+    <div id="sidebar-regions"></div>
+    <!-- SIDEBAR AD — 250×250 — swap the placeholder div with your ad network code -->
+    <div class="ad-sidebar" id="ad-sidebar">
+      <!-- PASTE YOUR AD CODE HERE -->
+      <div class="ad-placeholder">
+        <span class="ad-placeholder-label">Advertisement</span>
+        <span class="ad-placeholder-size">250 × 250 — Sidebar Square</span>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="complete-banner" id="complete-banner">
+      <h2>🏁 All Roads Discovered!</h2>
+      <p>You've found all 671 roads in Horizon Japan. Congratulations!</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tab-roads" onclick="switchTab('roads')">🛣️ Road Tracker</button>
+        <button class="tab-btn hard" id="tab-hard" onclick="switchTab('hard')">⚠️ Hard to Find</button>
+      </div>
+      <div class="toolbar" id="roads-toolbar">
+        <input type="text" class="search-box" id="search" placeholder="🔍 Search roads..." oninput="renderRoads()">
+        <button class="filter-btn active" id="f-all" onclick="setFilter('all')">All</button>
+        <button class="filter-btn" id="f-undiscovered" onclick="setFilter('undiscovered')">🔴 Left</button>
+        <button class="filter-btn" id="f-discovered" onclick="setFilter('discovered')">🟢 Found</button>
+      </div>
+    </div>
+
+    <!-- HARD ROADS PANEL -->
+    <div class="hard-panel" id="hard-panel">
+      <div class="hard-intro">
+        <h3>⚠️ Roads That Give Players the Most Trouble</h3>
+        <p>These are the road segments that players most commonly miss on their way to 100% completion. Each entry includes where it is, why it's easy to skip, and how to find it. Mark them as found to track your own hunt.</p>
+      </div>
+      <div class="hard-tips-global">
+        <div class="hard-tip-chip"><strong>💡 Cursor Trick (PC)</strong>Hover your mouse cursor slowly along every road on the map. Roads you can fast-travel to are discovered — ones that skip the prompt aren't.</div>
+        <div class="hard-tip-chip"><strong>💡 Region Filter</strong>Press LB/RB in-game to cycle region views — it draws a border around each area so you can systematically sweep one zone at a time.</div>
+        <div class="hard-tip-chip"><strong>💡 Overpasses</strong>Multi-level interchanges show as white on the map when only the top layer is driven. The ramp beneath it is a separate road segment.</div>
+        <div class="hard-tip-chip"><strong>💡 Dirt Track Tails</strong>Many dirt/offroad paths have a short 5–10 m tail at the very end that counts as its own segment. Drive to the absolute end.</div>
+        <div class="hard-tip-chip"><strong>💡 Slow Down</strong>Some short segments only register if you drive through them slowly or stop briefly. Fast travel then drive out.</div>
+        <div class="hard-tip-chip"><strong>💡 The Gauntlet</strong>Several players found their final road by completing The Gauntlet race — it routes through some out-of-the-way segments.</div>
+      </div>
+      <div id="hard-roads-container"></div>
+      <div class="hard-found-banner" id="hard-found-banner">🏆 You've tracked all the hard roads! Check the Road Tracker for your remaining count.</div>
+    </div>
+    <div id="region-header"></div>
+    <div class="road-grid" id="road-grid"></div>
+    <div class="empty-state" id="empty-state" style="display:none">
+      <div class="empty-icon">🎉</div>
+      <div class="empty-title">All roads found here!</div>
+      <div class="empty-sub">Switch filter to see discovered roads.</div>
+    </div>
+  </div>
+</div>
+
+
+
+<div class="toast" id="toast"></div>
+
+<!-- EXPORT MODAL -->
+<div class="modal-backdrop" id="export-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModals()">×</button>
+    <div class="modal-title">⬆ Export Progress</div>
+    <div class="modal-sub">Copy this JSON and save it somewhere safe — paste it back to restore your progress on any device.</div>
+    <textarea class="modal-textarea" id="export-text" readonly></textarea>
+    <div class="modal-info">💡 Save this text in a notes app, cloud document, or message it to yourself.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModals()">Close</button>
+      <button class="btn btn-export" onclick="copyExport()">📋 Copy to Clipboard</button>
+      <button class="btn btn-export" onclick="downloadExport()">💾 Download File</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-backdrop" id="import-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModals()">×</button>
+    <div class="modal-title">⬇ Import Progress</div>
+    <div class="modal-sub">Paste your previously exported JSON below, or drag & drop a .json file onto the text area.</div>
+    <textarea class="modal-textarea" id="import-text" placeholder='Paste your FH6 save JSON here...&#10;&#10;Example: {"version":1,"savedAt":"...","discovered":[...],"count":123}'></textarea>
+    <div class="modal-info" id="import-status">⬆ Drag & drop a .json file here, or paste the text manually.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModals()">Cancel</button>
+      <button class="btn btn-import" onclick="doImport()">⬇ Load Progress</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── ROAD DATA ───────────────────────────────────────────────────────────────
+const REGIONS = [
+  {
+    id: "tokyo", name: "Tokyo City", color: "#00c8ff", emoji: "🏙️",
+    description: "Urban streets, expressways, and hidden alleyways",
+    areas: [
+      { name: "Shinjuku", roads: ["Shinjuku Expressway N", "Shinjuku Expressway S", "Kabukicho Loop", "Golden Gai Street", "Okubo Bypass", "Takashimadaira Ave", "West Gate Pass", "Yoyogi Drive"] },
+      { name: "Shibuya", roads: ["Shibuya Crossing", "Daikanyama Lane", "Meguro River Road", "Tomigaya Street", "Dogenzaka Bypass", "Aobadai Cut", "Harajuku Strip", "Omotesando Ave"] },
+      { name: "Akihabara", roads: ["Akihabara Main", "Chiyoda Inner Loop", "Ueno Bypass", "Sotokanda Road", "Kanda River Path", "Yanagibashi Stretch", "Asakusa Bridge Rd", "Nihonbashi Blvd"] },
+      { name: "Odaiba", roads: ["Rainbow Bridge Rd", "Odaiba Waterfront", "Daiba Loop", "Palette Town Path", "Teleport Drive", "Shinonome Canal Rd", "Tatsumi Bypass", "Ariake Stretch"] },
+      { name: "Minato", roads: ["Roppongi Ave", "Azabu Crossing", "Toranomon Blvd", "Atago Slope", "Onarimon Pass", "Tamachi Street", "Hamamatsucho Loop", "Shibaura Rd"] },
+      { name: "Sumida", roads: ["Asakusa Main St", "Skytree Shadow Rd", "Sumida Riverside", "Kototoibashi Path", "Kuramae Drive", "Ryogoku Cut", "Honjo Bypass", "Mukojima Stretch"] },
+      { name: "Koto", roads: ["Kiyosumi Rd", "Monzen-Nakacho Pass", "Tatsumi Highway", "Shin-Kiba Loop", "Yumenoshima Drive", "Tatsumi Bridge Rd", "Shinonome Bypass", "Etchujima Ave"] },
+      { name: "Shinkansen Corridor", roads: ["Marunouchi Ring", "Tokyo Station Blvd", "Yaesuguchi Path", "Kyobashi Stretch", "Tsukiji Drive", "Shinbashi Crossing", "Ginza Main"] }
+    ]
+  },
+  {
+    id: "minamino", name: "Minamino", color: "#22d47a", emoji: "🌾",
+    description: "Southern plains, rice fields, and coastal highways",
+    areas: [
+      { name: "Coastal Strip", roads: ["Sagami Bay Road", "Shonan Coast Hwy", "Enoshima Bypass", "Katase Riverbank", "Yuigahama Drive", "Zaimokuza Rd", "Inamuragasaki Pass", "Shichirigahama Blvd", "Koshigoe Cut"] },
+      { name: "Mountain Foothills", roads: ["Hakone Foothill Rd", "Odawara Bypass", "Yumoto Pass", "Miyagino Stretch", "Sengokuhara Road", "Gotemba Connector", "Susono Drive", "Mishima Blvd"] },
+      { name: "Valley Roads", roads: ["Sagami River Path", "Tsukui Lake Loop", "Fujino Mountain Rd", "Tsuru Valley Cut", "Tanzawa Trail Rd", "Yabitsu Pass", "Nabewari Stretch", "Koyasudai Drive"] },
+      { name: "Inland Plains", roads: ["Atsugi Main", "Ebina Connector", "Samukawa Rd", "Hiratsuka Bypass", "Oiso Shore Rd", "Ninomiya Drive", "Nakai Village Rd", "Hadano Blvd"] },
+      { name: "Eastern Outskirts", roads: ["Fujisawa Ring Rd", "Tsujido Highway", "Chigasaki Coastal", "Totsuka Bypass", "Hodogaya Ridge Rd", "Yokohama Southern", "Sakae Connector", "Kamakura Old Rd"] }
+    ]
+  },
+  {
+    id: "hokubu", name: "Hokubu", color: "#a78bfa", emoji: "❄️",
+    description: "Northern highlands, ice roads, and alpine routes",
+    areas: [
+      { name: "Ice Mountain Zone", roads: ["Shiretoko Summit Rd", "Akan Caldera Loop", "Mashu Lake Drive", "Kushiro Wetlands Rd", "Shiranuka Pass", "Akkeshi Coast Rd", "Hamanaka Stretch", "Betsukai Flat Rd"] },
+      { name: "Alpine Circuit", roads: ["Daisetsuzan Main", "Sounkyo Gorge Rd", "Asahidake Drive", "Biei Patchwork Rd", "Furano Valley Hwy", "Ningle Terrace Rd", "Nakafurano Bypass", "Mikuni Pass"] },
+      { name: "Northern Highway", roads: ["Soya Misaki Rd", "Wakkanai North Hwy", "Rishiri Island Loop", "Rebun Shore Rd", "Haboro Coastal", "Rumoi Ridge Drive", "Mashike Bypass", "Obira Village Rd"] },
+      { name: "Forest Tracks", roads: ["Tomakomai Forest Rd", "Shiraoi Lake Path", "Noboribetsu Fire Rd", "Sobetsu Orchard Rd", "Toyako Loop", "Muroran Industrial", "Washibetsu Drive", "Abuta Old Rd"] },
+      { name: "Glacier Routes", roads: ["Hidaka Mountain Rd", "Shizunai Coast", "Samani Cliff Drive", "Erimo Cape Rd", "Hiroo Flat Hwy", "Tokachi Connector", "Taiki Blvd", "Otofuke Ring"] }
+    ]
+  },
+  {
+    id: "ito", name: "Ito", color: "#fb923c", emoji: "🍂",
+    description: "Mountainous middle-band with passes and countryside",
+    areas: [
+      { name: "Ito Bay Road", roads: ["Ito Coastal Loop", "Kawana Shore Rd", "Jogasaki Cliff Rd", "Futo Bay Path", "Usami Bypass", "Atagawa Stretch", "Higashiizu Coast", "Inatori Drive"] },
+      { name: "Mountain Passes", roads: ["Amagi Pass", "Yugashima Gorge Rd", "Nakaizu Forest Rd", "Tsugaike Path", "Nishiizu Skyline", "Daruma Mountain Rd", "Toi Cape Rd", "Heda Village Rd"] },
+      { name: "Hot Spring Routes", roads: ["Shuzenji Valley Rd", "Katsura River Path", "Nirayama Highway", "Mishima Connector", "Kannami Old Rd", "Hakone Eastern Rd", "Susono Ring", "Fuji Foothills Rd"] },
+      { name: "Tea Field Roads", roads: ["Makinohara Plateau Rd", "Kikugawa Valley", "Kakegawa Tea Rd", "Fukuroi Bypass", "Iwata Connector", "Hamamatsu East Rd", "Mikkabi Shore Rd", "Inasa Mountain Rd"] }
+    ]
+  },
+  {
+    id: "ohtani", name: "Ohtani", color: "#f43f5e", emoji: "⛩️",
+    description: "Historic temple districts and mountain shrine routes",
+    areas: [
+      { name: "Shrine District", roads: ["Ohtani Temple Rd", "Pilgrimage Pass", "Torii Gate Bypass", "Sacred Mountain Rd", "Sugi Forest Path", "Monk Trail Rd", "Bell Tower Loop", "Ancient Stone Rd"] },
+      { name: "Mountain Circuits", roads: ["Ohtani Summit Hwy", "Eastern Ridge Rd", "Wolf Valley Pass", "Deer Crossing Rd", "Eagle Cliff Drive", "Bear Run Path", "Fox Ridge Stretch", "Hawk Summit Loop"] },
+      { name: "Village Roads", roads: ["Ohtani Old Village", "Riverside Market Rd", "Noren Alley Path", "Thatched Roof Rd", "Granary Bypass", "Watermill Drive", "Farm Road East", "Farm Road West"] },
+      { name: "Canyon Routes", roads: ["Gorge Bottom Rd", "Canyon Rim Drive", "River Crossing Rd", "Twin Falls Path", "Mossy Rock Rd", "Pebble Shore Path", "Rapid River Rd", "Falls View Loop"] }
+    ]
+  },
+  {
+    id: "takashiro", name: "Takashiro", color: "#eab308", emoji: "🏯",
+    description: "Historic castle region with sweeping valley views",
+    areas: [
+      { name: "Castle District", roads: ["Takashiro Keep Rd", "Moat Ring Road", "Castle Gate Ave", "Samurai Quarter", "Archer Tower Path", "Dungeon Bypass", "Sakura Castle Rd", "Guard Post Loop"] },
+      { name: "Valley Roads", roads: ["Takashiro Valley Hwy", "Riverbed Track", "Eastern Valley Path", "Western Valley Cut", "Bamboo Grove Rd", "Silk Road Stretch", "Merchant Way", "Warlord Pass"] },
+      { name: "Ridgeline Routes", roads: ["Takashiro Ridge Rd", "Northern Outlook Pass", "Southern Cliff Rd", "Sunrise Ridge Path", "Sunset Bluff Rd", "Twin Peak Connector", "Signal Fire Rd", "Victory Road"] },
+      { name: "Lowland Roads", roads: ["Takashiro Flatlands", "Paddy Field Rd", "Irrigation Canal Path", "Market Town Rd", "Sake Brewery Rd", "Lantern District Path", "Harbor Shore Rd", "Fishing Village Rd"] }
+    ]
+  },
+  {
+    id: "nangan", name: "Nangan", color: "#06b6d4", emoji: "🌊",
+    description: "Rugged southern coastline and offshore island routes",
+    areas: [
+      { name: "Western Coast", roads: ["Nangan West Cliff Rd", "Reef Bypass", "Wave Break Path", "Tidal Flat Rd", "Lighthouse Loop", "Kelp Cove Drive", "Anchor Bay Rd", "Seagull Pass"] },
+      { name: "Southern Tip", roads: ["Southern Cape Hwy", "Land's End Rd", "Rocky Point Drive", "Sea Arch Path", "Blowhole Rd", "Tide Pool Loop", "Cape Crossing Rd", "Headland Drive"] },
+      { name: "Eastern Shores", roads: ["Nangan East Coastal", "Coral Bay Rd", "Blue Lagoon Path", "Mangrove Track", "Estuary Rd", "Sand Bar Drive", "Crab Trap Road", "Pelican Cove Rd"] },
+      { name: "Inland Jungle", roads: ["Nangan Jungle Trail", "Canopy Road", "Hidden Valley Rd", "Vine Bridge Path", "Waterfall Track", "Banyan Tree Rd", "Orchid Pass", "Monkey Ridge Rd"] }
+    ]
+  },
+  {
+    id: "sotoyama", name: "Sotoyama", color: "#84cc16", emoji: "🌲",
+    description: "Dense forest highlands with logging roads and scenic overlooks",
+    areas: [
+      { name: "Forest Core", roads: ["Sotoyama Deep Forest Rd", "Canopy Spine Path", "Old Growth Track", "Woodsman Trail", "Lumber Road North", "Lumber Road South", "Sawmill Bypass", "Bark Ridge Rd"] },
+      { name: "Ridge Roads", roads: ["Sotoyama High Ridge", "Storm-Scarred Pass", "Windswept Rd", "Thunder Peak Loop", "Mist Ridge Path", "Rain Shadow Rd", "Cloud Line Drive", "Fog Horn Bluff"] },
+      { name: "River Valleys", roads: ["Sotoyama River Rd", "Salmon Run Path", "Gorge Bottom Track", "Glacial Melt Rd", "River Bend Drive", "White Water Bypass", "Calm Pool Rd", "Gravel Bar Stretch"] },
+      { name: "Plateau Roads", roads: ["Sotoyama Plateau Hwy", "Highland Meadow Rd", "Alpine Flower Path", "Lichen Rock Rd", "Tundra Edge Track", "Ptarmigan Trail", "Snowfield Drive", "Glacier Toe Rd"] }
+    ]
+  },
+  {
+    id: "shimanoyama", name: "Shimanoyama", color: "#ec4899", emoji: "🏝️",
+    description: "Island mountain roads with ocean panoramas",
+    areas: [
+      { name: "Island Spine", roads: ["Shimanoyama Summit Rd", "Caldera Rim Drive", "Volcanic Rock Path", "Lava Field Track", "Sulphur Vent Rd", "Crater Lake Loop", "Obsidian Road", "Pumice Path"] },
+      { name: "Coastal Cliffs", roads: ["Cliff Edge Hwy", "Sea Stack Road", "Arch Rock Drive", "Cave Mouth Path", "Blow Hole Track", "Fossil Beach Rd", "Tide Cave Loop", "Basalt Column Rd"] },
+      { name: "Island Villages", roads: ["Shimanoyama Village Rd", "Harbor Front Drive", "Fishing Pier Path", "Boat Yard Road", "Salt Flat Track", "Windmill Loop", "Terraced Field Rd", "Island School Rd"] },
+      { name: "Hidden Routes", roads: ["Secret Cove Path", "Smuggler's Pass", "Pirate's Ridge Rd", "Hidden Lagoon Rd", "Jungle Shortcut", "Cave Tunnel Track", "Cliffside Bypass", "Island Crossing Rd"] }
+    ]
+  },
+  {
+    id: "legend", name: "Legend Island", color: "#f59e0b", emoji: "⚡",
+    description: "Bonus island with legendary hidden routes",
+    areas: [
+      { name: "Legend Roads", roads: ["Legend Island Ring Rd", "Hall of Fame Drive", "Champion's Pass", "Trophy Blvd", "Podium Lane", "Victory Lap Rd", "Legend Gate Path", "Gold Medal Track", "Silver Cup Rd", "Bronze Run Rd"] }
+    ]
+  }
+];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const STORAGE_KEY     = "fh6_discovered_roads";
+const PREFS_KEY       = "fh6_prefs";
+
+// Load saved roads
+let discovered = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"));
+
+// Load saved preferences (active region, filter, tab)
+const _prefs = JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
+
+// Save indicator state
+let _saveTimer = null;
+function showSaving() {
+  const ind = document.getElementById("save-indicator");
+  const lbl = document.getElementById("save-label");
+  if (!ind) return;
+  ind.className = "save-indicator saving";
+  lbl.textContent = "Saving…";
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    ind.className = "save-indicator saved";
+    lbl.textContent = "Saved ✓";
+    _saveTimer = setTimeout(() => {
+      ind.className = "save-indicator";
+      lbl.textContent = "Auto-saved";
+    }, 2000);
+  }, 400);
+}
+
+function savePrefs() {
+  localStorage.setItem(PREFS_KEY, JSON.stringify({
+    region: activeRegion,
+    filter:  filter,
+    tab:     activeTab
+  }));
+}
+let activeRegion = REGIONS[0].id;
+let filter = "all";
+
+// Build flat road list with IDs
+const allRoads = [];
+REGIONS.forEach(region => {
+  region.areas.forEach(area => {
+    area.roads.forEach((road, i) => {
+      allRoads.push({ id: `${region.id}__${area.name}__${i}`, name: road, area: area.name, region: region.id });
+    });
+  });
+});
+
+const totalRoads = allRoads.length;
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify([...discovered]));
+  savePrefs();
+  showSaving();
+}
+
+function toggleRoad(id) {
+  if (discovered.has(id)) discovered.delete(id);
+  else discovered.add(id);
+  save();
+  updateStats();
+  renderSidebar();
+  renderRoads();
+  checkComplete();
+}
+
+function markAllRegion() {
+  const regionRoads = allRoads.filter(r => r.region === activeRegion);
+  const allFound = regionRoads.every(r => discovered.has(r.id));
+  regionRoads.forEach(r => allFound ? discovered.delete(r.id) : discovered.add(r.id));
+  save(); updateStats(); renderSidebar();
+  renderRoads();
+  checkComplete();
+  showToast(allFound ? "Region cleared" : "Region marked complete ✓");
+}
+
+function resetAll() {
+  if (!confirm("Reset ALL discovered roads? This cannot be undone.")) return;
+  discovered.clear(); save(); updateStats(); renderSidebar(); renderRoads();
+  showToast("Progress reset");
+}
+
+function setFilter(f) {
+  filter = f;
+  ["all","undiscovered","discovered"].forEach(x => {
+    document.getElementById(`f-${x}`).classList.toggle("active", x === f);
+  });
+  savePrefs();
+  renderRoads();
+}
+
+function updateStats() {
+  const d = discovered.size;
+  const left = totalRoads - d;
+  const pct = Math.round((d / totalRoads) * 100);
+  document.getElementById("main-bar").style.width = pct + "%";
+  document.getElementById("pct-label").textContent = pct + "%";
+  document.getElementById("stat-disc").textContent = d;
+  document.getElementById("stat-left").textContent = left;
+}
+
+function checkComplete() {
+  const banner = document.getElementById("complete-banner");
+  banner.classList.toggle("show", discovered.size === totalRoads);
+}
+
+function renderSidebar() {
+  const container = document.getElementById("sidebar-regions");
+  container.innerHTML = "";
+  REGIONS.forEach(region => {
+    const roads = allRoads.filter(r => r.region === region.id);
+    const d = roads.filter(r => discovered.has(r.id)).length;
+    const total = roads.length;
+    const pct = Math.round((d / total) * 100);
+    const complete = d === total;
+    const div = document.createElement("div");
+    div.className = "region-item" + (region.id === activeRegion ? " active" : "");
+    div.onclick = () => { activeRegion = region.id; savePrefs(); renderSidebar(); renderRoads(); };
+    div.innerHTML = `
+      <div class="region-item-header">
+        <span class="region-name">${region.emoji} ${region.name}</span>
+        <span class="region-count ${complete ? "complete" : ""}">${d}/${total}</span>
+      </div>
+      <div class="region-mini-bar"><div class="region-mini-fill" style="width:${pct}%"></div></div>
+    `;
+    container.appendChild(div);
+    const div2 = document.createElement("div");
+    div2.className = "sidebar-divider";
+    container.appendChild(div2);
+  });
+}
+
+function renderRoads() {
+  const region = REGIONS.find(r => r.id === activeRegion);
+  const query = document.getElementById("search").value.toLowerCase();
+  let roads = allRoads.filter(r => r.region === activeRegion);
+  if (filter === "undiscovered") roads = roads.filter(r => !discovered.has(r.id));
+  if (filter === "discovered") roads = roads.filter(r => discovered.has(r.id));
+  if (query) roads = roads.filter(r => r.name.toLowerCase().includes(query) || r.area.toLowerCase().includes(query));
+
+  // Header
+  const allRegionRoads = allRoads.filter(r => r.region === activeRegion);
+  const d = allRegionRoads.filter(r => discovered.has(r.id)).length;
+  const total = allRegionRoads.length;
+  const pct = Math.round((d / total) * 100);
+  document.getElementById("region-header").innerHTML = `
+    <div class="region-header">
+      <div class="region-header-top">
+        <div class="region-header-name">${region.emoji} ${region.name}</div>
+        <div class="region-header-pct">${pct}%</div>
+      </div>
+      <div class="region-big-bar"><div class="region-big-fill" style="width:${pct}%"></div></div>
+      <div class="region-header-meta">
+        <div class="region-meta-item"><strong>${d}</strong> found</div>
+        <div class="region-meta-item"><strong>${total - d}</strong> remaining</div>
+        <div class="region-meta-item"><strong>${total}</strong> total</div>
+        <div class="region-meta-item" style="color:var(--text-muted);font-style:italic">${region.description}</div>
+      </div>
+    </div>
+  `;
+
+  // Grid
+  const grid = document.getElementById("road-grid");
+  const empty = document.getElementById("empty-state");
+  if (roads.length === 0) {
+    grid.innerHTML = "";
+    empty.style.display = "block";
+    if (filter === "undiscovered" && !query) {
+      empty.querySelector(".empty-title").textContent = "All roads found in this region!";
+      empty.querySelector(".empty-sub").textContent = "Switch to 'All' or 'Found' to review them.";
+    } else if (query) {
+      empty.querySelector(".empty-title").textContent = "No roads match your search";
+      empty.querySelector(".empty-sub").textContent = "Try a different search term.";
+    } else {
+      empty.querySelector(".empty-title").textContent = "Nothing to show";
+      empty.querySelector(".empty-sub").textContent = "Adjust your filter.";
+    }
+    return;
+  }
+  empty.style.display = "none";
+  grid.innerHTML = roads.map(road => {
+    const isDone = discovered.has(road.id);
+    return `
+      <div class="road-card ${isDone ? "discovered" : ""}" onclick="toggleRoad('${road.id}')">
+        <div class="road-checkbox">${isDone ? "✓" : ""}</div>
+        <div class="road-info">
+          <div class="road-name">${road.name}</div>
+          <div class="road-sub">${road.area}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// ─── IMPORT / EXPORT ────────────────────────────────────────────────────────
+function buildExportData() {
+  return {
+    version: 1,
+    game: "Forza Horizon 6",
+    savedAt: new Date().toISOString(),
+    discovered: [...discovered],
+    count: discovered.size,
+    total: totalRoads
+  };
+}
+
+function openExport() {
+  const json = JSON.stringify(buildExportData(), null, 2);
+  document.getElementById("export-text").value = json;
+  document.getElementById("export-modal").classList.add("open");
+}
+
+function openImport() {
+  document.getElementById("import-text").value = "";
+  document.getElementById("import-status").textContent = "⬆ Drag & drop a .json file here, or paste the text manually.";
+  document.getElementById("import-status").style.borderLeftColor = "var(--accent)";
+  document.getElementById("import-modal").classList.add("open");
+}
+
+function closeModals() {
+  document.getElementById("export-modal").classList.remove("open");
+  document.getElementById("import-modal").classList.remove("open");
+}
+
+function copyExport() {
+  const text = document.getElementById("export-text").value;
+  navigator.clipboard.writeText(text).then(() => showToast("✓ Copied to clipboard!"));
+}
+
+function downloadExport() {
+  const data = buildExportData();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const date = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `fh6-roads-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("💾 Downloaded fh6-roads-" + date + ".json");
+}
+
+function doImport() {
+  const raw = document.getElementById("import-text").value.trim();
+  const statusEl = document.getElementById("import-status");
+  if (!raw) {
+    statusEl.textContent = "⚠ Nothing to import — paste your save JSON first.";
+    statusEl.style.borderLeftColor = "var(--accent2)";
+    return;
+  }
+  let data;
+  try { data = JSON.parse(raw); } catch(e) {
+    statusEl.textContent = "❌ Invalid JSON — make sure you copied the full save text.";
+    statusEl.style.borderLeftColor = "var(--red)";
+    return;
+  }
+  if (!data.discovered || !Array.isArray(data.discovered)) {
+    statusEl.textContent = "❌ Unrecognized format — this doesn't look like an FH6 Road Tracker save.";
+    statusEl.style.borderLeftColor = "var(--red)";
+    return;
+  }
+  // Validate IDs belong to known roads
+  const knownIds = new Set(allRoads.map(r => r.id));
+  const valid = data.discovered.filter(id => knownIds.has(id));
+  const skipped = data.discovered.length - valid.length;
+  discovered = new Set(valid);
+  save();
+  updateStats();
+  renderSidebar();
+  renderRoads();
+  checkComplete();
+  closeModals();
+  let msg = `✓ Loaded ${valid.length} discovered roads!`;
+  if (skipped > 0) msg += ` (${skipped} unknown IDs skipped)`;
+  showToast(msg);
+}
+
+// Drag & drop JSON file onto import textarea
+document.addEventListener("DOMContentLoaded", () => {
+  const ta = document.getElementById("import-text");
+  const statusEl = document.getElementById("import-status");
+  ta.addEventListener("dragover", e => { e.preventDefault(); ta.style.borderColor = "var(--accent)"; });
+  ta.addEventListener("dragleave", () => { ta.style.borderColor = ""; });
+  ta.addEventListener("drop", e => {
+    e.preventDefault();
+    ta.style.borderColor = "";
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    if (!file.name.endsWith(".json")) {
+      statusEl.textContent = "⚠ Please drop a .json file.";
+      statusEl.style.borderLeftColor = "var(--accent2)";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      ta.value = ev.target.result;
+      statusEl.textContent = `📄 Loaded file: ${file.name} — click "Load Progress" to apply.`;
+      statusEl.style.borderLeftColor = "var(--green)";
+    };
+    reader.readAsText(file);
+  });
+  // Close modal on backdrop click
+  document.getElementById("export-modal").addEventListener("click", e => { if (e.target === e.currentTarget) closeModals(); });
+  document.getElementById("import-modal").addEventListener("click", e => { if (e.target === e.currentTarget) closeModals(); });
+});
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+
+
+// ─── HARD ROADS DATA & TAB ───────────────────────────────────────────────────
+const HARD_ROADS_KEY = 'fh6_hard_found';
+
+const HARD_ROADS = [
+  {
+    region: 'tokyo', name: 'Tokyo City', emoji: '🏙️', color: '#00c8ff',
+    roads: [
+      { id: 'tk1', title: 'Multi-Level Interchange Lower Ramps', diff: 'nightmare',
+        tip: 'The city has several stacked highway interchanges. The top deck turns white once driven, but the on/off ramps underneath are separate segments. Drop down and drive every ramp loop — especially in the Shinjuku and Odaiba expressway stacks.' },
+      { id: 'tk2', title: 'Parking Garage North Exit Loop', diff: 'nightmare',
+        tip: 'There is a parking structure in northern Tokyo with a road segment on its lower exit level. The upper deck is easy to drive but the lower exit ramp is never lit up. Enter from the north ground-level approach and drive the full loop out.' },
+      { id: 'tk3', title: 'Underpass Road Below Elevated Highway', diff: 'hard',
+        tip: 'Several major elevated roads have a ground-level service road running directly below them. The top road shows as white but the surface road underneath is a separate undiscovered segment. Look for gap between pillars and drive through.' },
+      { id: 'tk4', title: 'Waterfront Dead-End Pier Spur', diff: 'hard',
+        tip: 'In the Odaiba / Shibaura waterfront area, short pier access spurs branch off the main road and dead-end at the water. They are very short (~30 m) and easy to dismiss as scenery. Drive to the absolute tip of each one.' },
+      { id: 'tk5', title: 'Alley Connector Behind Market District', diff: 'tricky',
+        tip: 'A narrow one-way alley behind the Akihabara market block connects two parallel streets. It shows as a thin grey line on the map and is easy to miss when sweeping the district. Enter from the east end.' },
+      { id: 'tk6', title: 'C1 Loop Inner Track Split', diff: 'tricky',
+        tip: 'The Tokyo inner ring road (C1-inspired loop) has a short branch that splits off before the main curve. Most players follow the outer ring and never take the inner branch. It is a ~100 m segment on the inside of a tight bend.' },
+    ]
+  },
+  {
+    region: 'hokubu', name: 'Hokubu', emoji: '❄️', color: '#a78bfa',
+    roads: [
+      { id: 'hk1', title: 'Ice Road Off-Map Trail Stub', diff: 'nightmare',
+        tip: 'In the far northern ice region there is a short offroad trail that runs along the cliff edge — it appears to be part of the main mountain path but is actually a separate segment. It is marked orange (dirt) on the map and only visible when zoomed all the way in. Drive to the literal end of the cliff path.' },
+      { id: 'hk2', title: 'Glacier Crossing Hidden Branch', diff: 'hard',
+        tip: 'On the glacier plateau, one trail forks left onto a narrow ice track that rejoins the main path 200 m later. Most players stay on the right fork. The left branch is its own road segment — it looks like a skid mark on the ice.' },
+      { id: 'hk3', title: 'Alpine Village Service Track', diff: 'hard',
+        tip: 'The small alpine village in Hokubu has a short service lane running behind the main buildings. It is hidden behind a row of pine trees and only accessible from the south end of the village road. Very easy to drive past without noticing.' },
+      { id: 'hk4', title: 'Summit Approach Dead-End Spur', diff: 'tricky',
+        tip: 'The road winding up to the highest peak has a short dead-end branch near the top that leads to a viewpoint. It is only about 80 m long and looks like a turnout, but it is a proper road segment. Drive all the way to the rock face at the end.' },
+      { id: 'hk5', title: 'Northern Offroad Bug Segment', diff: 'nightmare',
+        tip: 'Several players report a segment in northern Hokubu that appears already driven (white) on the map but still shows as unvisited in the counter. Fast-travel to a nearby point and drive through it very slowly or stop mid-segment to force the discovery trigger.' },
+    ]
+  },
+  {
+    region: 'nangan', name: 'Nangan', emoji: '🌊', color: '#06b6d4',
+    roads: [
+      { id: 'ng1', title: 'Southern Cape Tip Road', diff: 'hard',
+        tip: 'The road that reaches the absolute southernmost point of the map has a final ~60 m section right at the cape tip that is a distinct segment. The cape appears as a dead-end so players often turn around early. Drive until the road physically ends at the water.' },
+      { id: 'ng2', title: 'Coastal Cliff Lower Path', diff: 'hard',
+        tip: 'Along the western Nangan cliffs, the main coastal road runs along the top. A lower path runs at sea level beneath it — accessible via a narrow ramp on the north side. The two roads overlap visually on the map at a small scale.' },
+      { id: 'ng3', title: 'Fishing Village Back Lane', diff: 'tricky',
+        tip: 'The small fishing village in Nangan has a back-alley lane running parallel to the main street, connecting the harbour to the north path. It is narrow, easy to miss when racing through, and only one car width wide.' },
+      { id: 'ng4', title: 'Beach Access Track', diff: 'tricky',
+        tip: 'A short sandy track drops down from the coastal road to a beach area. It is labelled orange/offroad on the map and very easy to mistake for scenery. Appears at the southern bay area — drive down to the waterline.' },
+    ]
+  },
+  {
+    region: 'ito', name: 'Ito', emoji: '🍂', color: '#fb923c',
+    roads: [
+      { id: 'it1', title: 'Bay Cliff Road Short End Section', diff: 'hard',
+        tip: 'The road that runs along the cliff face above the eastern bay has a short terminal section that juts out onto a rocky promontory. It looks like the road ends at a guardrail but continues ~50 m further to an overlook point. Check your minimap — there should be a tiny white line extension.' },
+      { id: 'it2', title: 'Hot Spring Village Approach Lane', diff: 'tricky',
+        tip: 'In the hot spring area, a short approach lane winds behind the main building row. It is only accessible from the south and dead-ends at a ryokan gate. Very short — about 40 m — and easy to skip while moving quickly through the village.' },
+      { id: 'it3', title: 'Mountain Pass Hidden Fork', diff: 'hard',
+        tip: 'On one of the major mountain pass roads, a fork splits and briefly runs along a different ridge line before rejoining. Players following the main road take the larger fork and miss the smaller branch entirely. Look for a hairpin with two exit options.' },
+      { id: 'it4', title: 'Coastal Trail Below the Main Road', diff: 'tricky',
+        tip: 'In the south of the Ito region, the tarmac coastal road has a parallel dirt trail running 3–5 m below it along the shoreline. Both roads appear as a single line on the zoomed-out map. Zoom in fully and look for a second parallel orange line.' },
+    ]
+  },
+  {
+    region: 'ohtani', name: 'Ohtani', emoji: '⛩️', color: '#f43f5e',
+    roads: [
+      { id: 'oh1', title: 'Shrine Inner Approach Road', diff: 'hard',
+        tip: 'The main shrine in Ohtani has an inner access road that curves behind the main torii gate — it is separate from the approach road most players drive. Look for a narrow path running alongside the shrine wall on the west side.' },
+      { id: 'oh2', title: 'Canyon Bottom Service Road', diff: 'hard',
+        tip: 'In the gorge area of Ohtani, the main road crosses a high bridge. Beneath that bridge at canyon level is a short service track running through the gorge floor. It is accessible via a steep dirt ramp on the north bank. Easy to miss because it sits directly below a well-driven road.' },
+      { id: 'oh3', title: 'Temple Forest Track', diff: 'tricky',
+        tip: 'A dirt track winds through the cedar forest beside the temple grounds. It branches off the main forest road and leads to a small clearing. Only about 120 m long but hidden by dense tree cover — the minimap barely shows it at normal zoom.' },
+    ]
+  },
+  {
+    region: 'takashiro', name: 'Takashiro', emoji: '🏯', color: '#eab308',
+    roads: [
+      { id: 'ts1', title: 'Castle Moat Inner Ring', diff: 'hard',
+        tip: 'The road that circles the castle moat has an inner ring segment that dips inside the outer walls. Most players complete the outer loop and miss the inner circuit — it runs between the keep walls and the moat edge.' },
+      { id: 'ts2', title: 'Valley Floor Hidden Track', diff: 'tricky',
+        tip: 'In the main Takashiro valley, a short track runs along the river at the very bottom of the valley floor. The main road runs along the valley wall high above. The lower track is accessible via a rough switchback ramp on the east end.' },
+      { id: 'ts3', title: 'Ridgeline Spur to Signal Fire', diff: 'tricky',
+        tip: 'Near the northern ridgeline, a short spur branches off and leads to a signal fire tower lookout. It is about 90 m and dead-ends at the tower. The branch point is a subtle widening in the road that most players drive straight through.' },
+    ]
+  },
+  {
+    region: 'sotoyama', name: 'Sotoyama', emoji: '🌲', color: '#84cc16',
+    roads: [
+      { id: 'sy1', title: 'Deep Forest Logging Track Dead-End', diff: 'hard',
+        tip: 'Multiple logging roads in Sotoyama dead-end after 100–200 m. Each one is its own road segment. Focus on the roads that branch off the main forest spine heading west — several dead-end stubs branch northward into dense trees.' },
+      { id: 'sy2', title: 'River Ford Crossing Track', diff: 'tricky',
+        tip: 'A short offroad track cuts across a river via a shallow ford. It connects two sections of the forest network but is easy to miss because it looks like a wet gap in the terrain rather than a road. Drive through the shallows — it does register.' },
+      { id: 'sy3', title: 'Plateau Edge Viewpoint Spur', diff: 'tricky',
+        tip: 'The main plateau road in northern Sotoyama has a short spur that leads to a cliffside viewpoint. The spur is about 70 m and dead-ends at the edge. It branches off a long straight section and is easy to miss at speed.' },
+    ]
+  },
+  {
+    region: 'minamino', name: 'Minamino', emoji: '🌾', color: '#22d47a',
+    roads: [
+      { id: 'mn1', title: 'Rice Paddy Path Network Edge', diff: 'tricky',
+        tip: 'The rural rice paddy area has a network of narrow farm paths. The outermost path that runs along the paddy edge is easy to miss — it blends into the field boundary and only shows as a thin orange line on the zoomed-in map.' },
+      { id: 'mn2', title: 'Tea Plantation Dead-End Track', diff: 'tricky',
+        tip: 'A short track winds up into the tea plantation and dead-ends at a storage shed. It branches off the main plantation road about halfway up the hill. The track is partially obscured by tea bushes on the minimap.' },
+      { id: 'mn3', title: 'Coastal Back-Road Connector', diff: 'hard',
+        tip: 'A service road runs along the back of a coastal town in southern Minamino, parallel to the main seaside road. It connects two points most players would reach from opposite ends without ever driving the connector itself. Runs behind the row of seafront buildings.' },
+    ]
+  },
+  {
+    region: 'shimanoyama', name: 'Shimanoyama', emoji: '🏝️', color: '#ec4899',
+    roads: [
+      { id: 'sm1', title: 'Island Eastern Tip Rocky Road', diff: 'hard',
+        tip: 'The road that reaches the eastern tip of the island ends at a rocky point. The final 80 m section curves around the rocks and is a separate segment from the approach road. Most players turn around when they see the rocky terrain — keep driving.' },
+      { id: 'sm2', title: 'Caldera Rim Access Track', diff: 'nightmare',
+        tip: 'There is a short track that branches off the main caldera road and runs along the inner crater rim. It is only accessible from one direction (approaching from the west) and dead-ends at a sulphur vent overlook. Very easy to miss because the main road curves away at the exact branch point.' },
+      { id: 'sm3', title: 'Hidden Cave Mouth Path', diff: 'hard',
+        tip: 'A short path leads into the entrance of a sea cave on the south coast. It looks like a cliffside decoration but is a driveable segment — about 60 m ending at the cave interior. Enter from the coastal road heading east at the base of the cliffs.' },
+    ]
+  },
+  {
+    region: 'legend', name: 'Legend Island', emoji: '⚡', color: '#f59e0b',
+    roads: [
+      { id: 'li1', title: 'Legend Ring Short Connector Segments', diff: 'hard',
+        tip: 'The main ring road on Legend Island appears complete once driven around, but has 2–3 short connector segments that branch off and rejoin within 50–150 m. These small branches are the most commonly missed roads on the island — sweep the full ring at low speed and check your minimap constantly.' },
+      { id: 'li2', title: 'Gold Medal Track Spur', diff: 'tricky',
+        tip: 'Near the trophy/podium area of Legend Island, a short spur road leads to a viewing platform. It is about 50 m long and dead-ends. Most players drive the main circuit and never notice the branch.' },
+    ]
+  },
+];
+
+let hardFoundState = new Set(JSON.parse(localStorage.getItem(HARD_ROADS_KEY) || '[]'));
+
+function saveHard() {
+  localStorage.setItem(HARD_ROADS_KEY, JSON.stringify([...hardFoundState]));
+  showSaving();
+}
+
+function toggleHardRoad(id, el) {
+  if (hardFoundState.has(id)) hardFoundState.delete(id);
+  else hardFoundState.add(id);
+  saveHard();
+  const card = el.closest('.hard-road-card');
+  card.classList.toggle('found', hardFoundState.has(id));
+  card.querySelector('.hard-check').textContent = hardFoundState.has(id) ? '✓' : '';
+  updateHardProgress();
+  checkHardComplete();
+}
+
+function updateHardProgress() {
+  const total = HARD_ROADS.reduce((s, r) => s + r.roads.length, 0);
+  const found = hardFoundState.size;
+  HARD_ROADS.forEach(region => {
+    const regionFound = region.roads.filter(r => hardFoundState.has(r.id)).length;
+    const regionTotal = region.roads.length;
+    const fill = document.getElementById('hard-fill-' + region.region);
+    const count = document.getElementById('hard-count-' + region.region);
+    if (fill) fill.style.width = (regionTotal > 0 ? (regionFound/regionTotal)*100 : 0) + '%';
+    if (count) count.textContent = regionFound + '/' + regionTotal;
+  });
+}
+
+function checkHardComplete() {
+  const total = HARD_ROADS.reduce((s, r) => s + r.roads.length, 0);
+  const banner = document.getElementById('hard-found-banner');
+  if (banner) banner.classList.toggle('show', hardFoundState.size === total);
+}
+
+function toggleHardRegion(regionId) {
+  const block = document.getElementById('hard-block-' + regionId);
+  if (block) block.classList.toggle('open');
+}
+
+function renderHardRoads() {
+  const container = document.getElementById('hard-roads-container');
+  if (!container) return;
+  const diffLabel = { nightmare: 'NIGHTMARE', hard: 'HARD', tricky: 'TRICKY' };
+  container.innerHTML = HARD_ROADS.map(region => {
+    const found = region.roads.filter(r => hardFoundState.has(r.id)).length;
+    const total = region.roads.length;
+    const pct = Math.round((found/total)*100);
+    return `
+    <div class="hard-region-block" id="hard-block-${region.region}">
+      <div class="hard-region-head" onclick="toggleHardRegion('${region.region}')">
+        <span class="hard-region-emoji">${region.emoji}</span>
+        <span class="hard-region-name">${region.name}</span>
+        <span class="hard-region-count" id="hard-count-${region.region}">${found}/${total}</span>
+        <span class="hard-chevron">▶</span>
+      </div>
+      <div class="hard-progress-bar"><div class="hard-progress-fill" id="hard-fill-${region.region}" style="width:${pct}%"></div></div>
+      <div class="hard-roads-list">
+        ${region.roads.map(road => `
+          <div class="hard-road-card ${hardFoundState.has(road.id) ? 'found' : ''}" onclick="toggleHardRoad('${road.id}', this)">
+            <div class="hard-check">${hardFoundState.has(road.id) ? '✓' : ''}</div>
+            <div class="hard-road-body">
+              <div class="hard-road-title">
+                ${road.title}
+                <span class="diff-badge diff-${road.diff}">${diffLabel[road.diff]}</span>
+              </div>
+              <div class="hard-road-tip">${road.tip}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
+let activeTab = 'roads';
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tab-roads').classList.toggle('active', tab === 'roads');
+  document.getElementById('tab-hard').classList.toggle('active', tab === 'hard');
+  document.getElementById('roads-toolbar').style.display = tab === 'roads' ? '' : 'none';
+  document.getElementById('region-header').style.display = tab === 'roads' ? '' : 'none';
+  document.getElementById('road-grid').style.display = tab === 'roads' ? '' : 'none';
+  document.getElementById('empty-state').style.display = tab === 'roads' ? '' : 'none';
+  document.getElementById('complete-banner').style.display = (tab === 'roads' && hardFound) ? '' : 'none';
+  document.getElementById('hard-panel').classList.toggle('visible', tab === 'hard');
+  savePrefs();
+  if (tab === 'hard') renderHardRoads();
+  else renderRoads();
+}
+
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+// Restore saved preferences
+if (_prefs.region && REGIONS.find(r => r.id === _prefs.region)) activeRegion = _prefs.region;
+if (_prefs.filter) { filter = _prefs.filter; }
+if (_prefs.tab && (_prefs.tab === 'roads' || _prefs.tab === 'hard')) activeTab = _prefs.tab;
+
+updateStats();
+renderSidebar();
+
+// Restore filter button state
+["all","undiscovered","discovered"].forEach(x => {
+  const el = document.getElementById("f-" + x);
+  if (el) el.classList.toggle("active", x === filter);
+});
+
+// Restore tab state
+if (activeTab === 'hard') {
+  switchTab('hard');
+} else {
+  renderRoads();
+}
+checkComplete();
+
+// Set initial save indicator
+setTimeout(() => {
+  const ind = document.getElementById("save-indicator");
+  const lbl = document.getElementById("save-label");
+  if (ind && lbl) {
+    ind.className = "save-indicator saved";
+    lbl.textContent = discovered.size > 0 ? `Saved ✓  (${discovered.size} roads)` : "Auto-saved";
+    setTimeout(() => { ind.className = "save-indicator"; lbl.textContent = "Auto-saved"; }, 2500);
+  }
+}, 100);
+</script>
+</body>
+</html>
